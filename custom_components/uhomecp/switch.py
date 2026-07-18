@@ -12,6 +12,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api import UHomeCPClient
 from .const import DOMAIN
+from .sensor import get_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ async def async_setup_entry(
                 coordinator=coordinator,
                 client=client,
                 door=door,
-                entry_id=entry.entry_id,
+                entry=entry,
             )
         )
 
@@ -53,7 +54,7 @@ class UHomeCPDoorSwitch(CoordinatorEntity, SwitchEntity):
         coordinator,
         client: UHomeCPClient,
         door: dict[str, Any],
-        entry_id: str,
+        entry: ConfigEntry,
     ) -> None:
         """Initialize the door switch."""
         super().__init__(coordinator)
@@ -64,8 +65,9 @@ class UHomeCPDoorSwitch(CoordinatorEntity, SwitchEntity):
         self._door_name = door.get("name", "Unknown Door")
         self._is_on = False
 
-        self._attr_unique_id = f"{DOMAIN}_{entry_id}_{self._door_id}"
+        self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_{self._door_id}"
         self._attr_name = self._door_name
+        self._attr_device_info = get_device_info(entry)
 
     @property
     def is_on(self) -> bool:

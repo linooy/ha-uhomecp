@@ -1,4 +1,4 @@
-"""Sensor platform for U管家门禁 - exposes community and door count info."""
+"""Sensor platform for U管家门禁 - exposes community name."""
 
 import logging
 from typing import Any
@@ -6,6 +6,8 @@ from typing import Any
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -13,6 +15,18 @@ from .api import UHomeCPClient
 from .const import CONF_COMMUNITY_ID, CONF_COMMUNITY_NAME, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def get_device_info(entry: ConfigEntry) -> DeviceInfo:
+    """Return device info for grouping entities by community."""
+    community_id = entry.data.get(CONF_COMMUNITY_ID, "")
+    community_name = entry.data.get(CONF_COMMUNITY_NAME, "U管家门禁")
+    return DeviceInfo(
+        identifiers={(DOMAIN, f"{entry.entry_id}_{community_id}")},
+        name=community_name,
+        manufacturer="四格互联 SEGI",
+        entry_type=DeviceEntryType.SERVICE,
+    )
 
 
 async def async_setup_entry(
@@ -25,20 +39,13 @@ async def async_setup_entry(
     client: UHomeCPClient = data["client"]
     coordinator = data["coordinator"]
 
-    entities = [
+    async_add_entities([
         UHomeCPCommunitySensor(
             coordinator=coordinator,
             client=client,
             entry=entry,
         ),
-        UHomeCPDoorCountSensor(
-            coordinator=coordinator,
-            client=client,
-            entry=entry,
-        ),
-    ]
-
-    async_add_entities(entities)
+    ])
 
 
 class UHomeCPCommunitySensor(CoordinatorEntity, SensorEntity):
@@ -58,9 +65,9 @@ class UHomeCPCommunitySensor(CoordinatorEntity, SensorEntity):
         self._client = client
         self._community_name = entry.data.get(CONF_COMMUNITY_NAME, "Unknown")
         self._community_id = entry.data.get(CONF_COMMUNITY_ID, "")
-
         self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_community"
         self._attr_name = "小区"
+        self._attr_device_info = get_device_info(entry)
 
     @property
     def native_value(self) -> str:
@@ -72,40 +79,4 @@ class UHomeCPCommunitySensor(CoordinatorEntity, SensorEntity):
         """Return additional attributes."""
         return {
             "community_id": self._client.community_id or self._community_id,
-        }
-
-
-class UHomeCPDoorCountSensor(CoordinatorEntity, SensorEntity):
-    """Sensor showing the number of available doors."""
-
-    _attr_has_entity_name = True
-    _attr_icon = "mdi:door"
-    _attr_native_unit_of_measurement = "doors"
-
-    def __init__(
-        self,
-        coordinator,
-        client: UHomeCPClient,
-        entry: ConfigEntry,
-    ) -> None:
-        """Initialize the door count sensor."""
-        super().__init__(coordinator)
-        self._client = client
-
-        self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_door_count"
-        self._attr_name = "门禁数量"
-
-    @property
-    def native_value(self) -> int:
-        """Return the number of doors."""
-        if self.coordinator.data:
-            return len(self.coordinator.data)
-        return len(self._client.doors)
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return door names as attributes."""
-        doors = self.coordinator.data or self._client.doors
-        return {
-            "doors": [d.get("name", "Unknown") for d in doors],
         }
