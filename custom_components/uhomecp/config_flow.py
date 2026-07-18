@@ -54,6 +54,7 @@ class UHomeCPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._random_token: str = ""
         self._img_code: str = ""
         self._cookies: dict[str, str] = {}
+        self._user_info: dict[str, Any] = {}
         self._communities: list[dict[str, Any]] = []
 
     async def async_step_user(
@@ -145,9 +146,9 @@ class UHomeCPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def _after_login(self) -> FlowResult:
-        """After successful login, save cookies and get communities."""
-        # Save session cookies for reuse in __init__.py setup
-        self._cookies = self._client.export_cookies()
+        """After successful login, save session and get communities."""
+        self._cookies = self._client.get_session_cookies()
+        self._user_info = self._client.user_info
 
         try:
             self._communities = await self._client.async_get_communities()
@@ -160,7 +161,8 @@ class UHomeCPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data={
                     CONF_PHONE: self._phone,
                     CONF_PASSWORD: self._password,
-                    "cookies": self._cookies,
+                    "_cookies": self._cookies,
+                    "_user_info": self._user_info,
                 },
             )
 
@@ -183,7 +185,8 @@ class UHomeCPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_PASSWORD: self._password,
                     CONF_COMMUNITY_ID: community_id,
                     CONF_COMMUNITY_NAME: community_name,
-                    "cookies": self._cookies,
+                    "_cookies": _cookies,
+                    "_user_info": _user_info,
                 },
             )
 
@@ -211,6 +214,8 @@ class UHomeCPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_PASSWORD: self._password,
                     CONF_COMMUNITY_ID: community_id,
                     CONF_COMMUNITY_NAME: community_name,
+                    "_cookies": self._cookies,
+                    "_user_info": self._user_info,
                 },
             )
 

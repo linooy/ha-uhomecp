@@ -29,24 +29,36 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     password = entry.data[CONF_PASSWORD]
     community_id = entry.data.get(CONF_COMMUNITY_ID, "")
     community_name = entry.data.get(CONF_COMMUNITY_NAME, "")
-    saved_cookies = entry.data.get("cookies", {})
 
     client = UHomeCPClient(phone, password)
 
-    # Try to reuse saved cookies first to avoid triggering captcha
-    if saved_cookies:
-        client.import_cookies(saved_cookies)
-        _LOGGER.debug("Restored %d cookies from config entry", len(saved_cookies))
+    # Restore saved session if available, otherwise fresh login
+    saved_cookies = entry.data.get("_cookies")
+    saved_user_info = entry.data.get("_user_info")
+    if saved_cookies and saved_user_info:
+        client.set_session_cookies(saved_cookies)
+        client.set_user_info(saved_user_info)
+        _LOGGER.info("Restored saved session for %s", phone)
+    else:
+        try:
+            await client.async_login()
+        except CaptchaRequired:
+            _LOGGER.error(
+                "Captcha required during setup - please reconfigure the integration"
+            )
+            return False
+        except UHomeCPApiError as err:
+            _LOGGER.error("Failed to login: %s", err)
+            return False
 
-    # Verify the session is still valid by fetching doors
     if community_id:
         await client.async_set_community(community_id, community_name)
 
+    # Verify session by fetching doors
     try:
         await client.async_get_doors()
     except Exception:
-        # Cookies expired or invalid, need to re-login
-        _LOGGER.info("Saved session expired, re-logging in")
+        _LOGGER.info("Saved session invalid, re-logging in")
         try:
             await client.async_login()
         except CaptchaRequired:
@@ -87,7 +99,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=timedelta(seconds=UPDATE_INTERVAL),
     )
 
-    # Fetch initial data
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})

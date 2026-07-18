@@ -74,15 +74,20 @@ class UHomeCPClient:
         self.doors: list[dict[str, Any]] = []
         self._warmed_up = False
 
-    def export_cookies(self) -> dict[str, str]:
-        """Export session cookies as a dict for persistence."""
-        return {c.name: c.value or "" for c in self.session.cookies}
+    def get_session_cookies(self) -> dict[str, str]:
+        """Export session cookies for persistence."""
+        return dict(self.session.cookies)
 
-    def import_cookies(self, cookies: dict[str, str]) -> None:
-        """Import session cookies from a dict."""
+    def set_session_cookies(self, cookies: dict[str, str]) -> None:
+        """Restore session cookies from saved state."""
         for name, value in cookies.items():
             self.session.cookies.set(name, value, domain="www.uhomecp.com")
-        self._warmed_up = True  # cookies already include r_ua
+        self._warmed_up = True
+
+    def set_user_info(self, user_info: dict[str, Any]) -> None:
+        """Restore user info from saved state."""
+        self.user_info = user_info
+        self.logged_in = True
 
     def _warmup(self) -> None:
         """Warm up the session by getting r_ua cookie from server.
