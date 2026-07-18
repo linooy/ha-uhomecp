@@ -18,12 +18,20 @@ g2fTqNnsM00siVsqh6VGEV9XBkWOUoyg601WNbR3HiIa3GyLvo79oND0mdFBP0QqQc
 2h7IMqaR71hEwIDAQAB
 -----END PUBLIC KEY-----"""
 
-# Default headers
+# Default headers - must include sec-ch-ua and custom headers
+# or the server rejects with "密码错误" regardless of password
 DEFAULT_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 "
-    "KHTML, like Gecko) Version/4.0 Chrome/90.0.4430.91 Mobile Safari/537.36",
+    "(KHTML, like Gecko) Version/4.0 Chrome/90.0.4430.91 Mobile Safari/537.36",
     "Referer": f"{BASE_URL}/h5/wechat-platform-h5/",
     "Origin": BASE_URL,
+    "Accept": "application/json, text/plain, */*",
+    "sec-ch-ua-platform": '"Android"',
+    "sec-ch-ua": '"Chromium";v="90", "Google Chrome";v="90"',
+    "sec-ch-ua-mobile": "?1",
+    "versionCode": "60",
+    "source": "6",
+    "platform": "null",
 }
 
 # Config flow
