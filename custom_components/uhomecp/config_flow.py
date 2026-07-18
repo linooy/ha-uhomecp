@@ -112,12 +112,37 @@ class UHomeCPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the captcha step."""
         errors: dict[str, str] = {}
 
+        # Build captcha image HTML (always needed for form display)
+        captcha_html = f'<img src="data:image/jpeg;base64,{self._img_code}" style="width:200px;">'
+
         if user_input is not None:
             captcha = user_input["captcha"]
+
+            # Empty captcha = refresh
+            if not captcha.strip():
+                try:
+                    self._img_code, self._random_token = (
+                        await self._client.async_get_captcha()
+                    )
+                except Exception:
+                    _LOGGER.exception("Failed to refresh captcha")
+                    errors["base"] = "unknown"
+                # Rebuild captcha_html with new image
+                captcha_html = f'<img src="data:image/jpeg;base64,{self._img_code}" style="width:200px;">'
+                return self.async_show_form(
+                    step_id="captcha",
+                    data_schema=STEP_CAPTCHA_DATA_SCHEMA,
+                    errors=errors,
+                    description_placeholders={"tip": captcha_html},
+                )
+
             try:
                 await self._client.async_login_with_captcha(
                     captcha, self._random_token
                 )
+            except AccountLocked as err:
+                _LOGGER.error("Account locked: %s", err)
+                errors["base"] = "account_locked"
             except LoginError as err:
                 _LOGGER.error("Login with captcha failed: %s", err)
                 errors["base"] = "invalid_captcha"
@@ -134,9 +159,6 @@ class UHomeCPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
             else:
                 return await self._after_login()
-
-        # Build captcha image as HTML img tag (HA config flow supports HTML, not markdown)
-        captcha_html = f'<img src="data:image/jpeg;base64,{self._img_code}" style="width:200px;">'
 
         return self.async_show_form(
             step_id="captcha",

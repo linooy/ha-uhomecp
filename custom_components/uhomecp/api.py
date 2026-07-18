@@ -28,14 +28,17 @@ CODE_SUCCESS = "0"
 CODE_SESSION_EXPIRED = "0000002"
 
 
+# RSA public key - cached once at module level
+_public_key = serialization.load_pem_public_key(RSA_PUBLIC_KEY.encode())  # type: ignore[union-attr]
+
+
 def encrypt_password(password: str) -> str:
     """Encrypt password: Base64 encode -> RSA encrypt -> base64 output.
 
     Replicates the sg-rsa.js encryptLong flow from the H5 frontend.
     """
     pwd_b64 = base64.b64encode(password.encode()).decode()
-    public_key = serialization.load_pem_public_key(RSA_PUBLIC_KEY.encode())
-    encrypted = public_key.encrypt(pwd_b64.encode(), asym_padding.PKCS1v15())
+    encrypted = _public_key.encrypt(pwd_b64.encode(), asym_padding.PKCS1v15())
     return base64.b64encode(encrypted).decode()
 
 
@@ -189,6 +192,9 @@ class UHomeCPClient:
             return {"success": True, "data": self.user_info}
 
         msg = result.get("msg") or result.get("message", "Unknown error")
+        if "锁定" in msg or "locked" in msg.lower():
+            _LOGGER.error("Account locked during captcha login: %s", msg)
+            raise AccountLocked(msg)
         _LOGGER.error("Login with captcha failed: %s", msg)
         raise LoginError(msg)
 
