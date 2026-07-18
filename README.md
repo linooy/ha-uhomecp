@@ -1,5 +1,7 @@
 # ha-uhomecp
 
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://hacs.xyz/)
+
 Home Assistant 集成：[uhomecp.com](https://www.uhomecp.com) 社区门禁系统
 
 ## 验证状态
