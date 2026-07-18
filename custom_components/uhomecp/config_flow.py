@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
 
-from .api import CaptchaRequired, LoginError, UHomeCPClient
+from .api import AccountLocked, CaptchaRequired, LoginError, UHomeCPClient
 from .const import CONF_COMMUNITY_ID, CONF_COMMUNITY_NAME, CONF_PASSWORD, CONF_PHONE, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -61,6 +61,9 @@ class UHomeCPConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._img_code = err.img_code
                 self._random_token = err.random_token
                 return await self.async_step_captcha()
+            except AccountLocked as err:
+                _LOGGER.error("Account locked: %s", err)
+                errors["base"] = "account_locked"
             except LoginError as err:
                 _LOGGER.error("Login failed: %s", err)
                 errors["base"] = "invalid_auth"

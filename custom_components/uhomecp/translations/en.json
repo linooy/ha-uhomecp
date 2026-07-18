@@ -27,6 +27,7 @@
     "error": {
       "invalid_auth": "Invalid phone number or password",
       "invalid_captcha": "Invalid captcha, please try again",
+      "account_locked": "Account locked, please try again later (usually 30min~hours)",
       "unknown": "Unknown error, please try again later"
     },
     "abort": {

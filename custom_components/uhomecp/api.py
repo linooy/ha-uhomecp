@@ -47,6 +47,10 @@ class LoginError(UHomeCPApiError):
     """Login failed."""
 
 
+class AccountLocked(UHomeCPApiError):
+    """Account is locked due to too many failed attempts."""
+
+
 class CaptchaRequired(UHomeCPApiError):
     """Captcha is required to complete login."""
 
@@ -127,6 +131,9 @@ class UHomeCPClient:
             raise CaptchaRequired(img_code, random_token)
 
         msg = result.get("msg") or result.get("message", "Unknown error")
+        if "锁定" in msg or "locked" in msg.lower():
+            _LOGGER.error("Account locked: %s", msg)
+            raise AccountLocked(msg)
         _LOGGER.error("Login failed: %s", msg)
         raise LoginError(msg)
 
